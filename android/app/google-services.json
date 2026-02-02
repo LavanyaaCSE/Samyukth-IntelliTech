@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "450979258698",
+    "project_id": "intellitrain-3fc95",
+    "storage_bucket": "intellitrain-3fc95.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:450979258698:android:6b3bd8a4f4dc5af813e1b3",
+        "android_client_info": {
+          "package_name": "com.company.intellitrain"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "450979258698-30opfq3nldjdf6p6unsdnkeoqks0ambs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBV70LJ2lI8dvhteNMzCMo4swFiur8fo-M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "450979258698-30opfq3nldjdf6p6unsdnkeoqks0ambs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
