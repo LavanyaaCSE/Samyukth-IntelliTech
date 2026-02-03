@@ -208,6 +208,7 @@ class _VoiceInterviewScreenState extends ConsumerState<VoiceInterviewScreen> {
           mode: widget.mode,
           topic: widget.topic,
           sessionData: _sessionHistory,
+          isVoice: true,
         ),
       ),
     );

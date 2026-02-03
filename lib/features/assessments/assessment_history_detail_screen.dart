@@ -1,112 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
-import '../../models/assessment.dart';
 import '../../models/assessment_result.dart';
-import '../../services/assessment_service.dart';
-import '../../services/auth_service.dart';
 
-class AssessmentResultScreen extends ConsumerStatefulWidget {
-  final Assessment assessment;
-  final Map<int, int> userAnswers;
+class AssessmentHistoryDetailScreen extends StatelessWidget {
+  final AssessmentResult result;
 
-  const AssessmentResultScreen({
+  const AssessmentHistoryDetailScreen({
     super.key,
-    required this.assessment,
-    required this.userAnswers,
+    required this.result,
   });
 
   @override
-  ConsumerState<AssessmentResultScreen> createState() => _AssessmentResultScreenState();
-}
-
-class _AssessmentResultScreenState extends ConsumerState<AssessmentResultScreen> {
-  bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _saveResult();
-  }
-
-  Future<void> _saveResult() async {
-    final user = ref.read(authServiceProvider).currentUser;
-    if (user == null) return;
-
-    setState(() => _isSaving = true);
-
-    int correctCount = 0;
-    widget.userAnswers.forEach((qIndex, aIndex) {
-      if (widget.assessment.questions[qIndex].correctOptionIndex == aIndex) {
-        correctCount++;
-      }
-    });
-
-    final totalQuestions = widget.assessment.questions.length;
-    final scorePercentage = (correctCount / totalQuestions) * 100;
-
-    final questionsData = widget.assessment.questions.map((q) => {
-      'text': q.text,
-      'options': q.options,
-      'correctOptionIndex': q.correctOptionIndex,
-      'section': q.section,
-      'concept': q.concept,
-    }).toList();
-
-    final result = AssessmentResult(
-      id: const Uuid().v4(),
-      userId: user.uid,
-      assessmentId: widget.assessment.id,
-      assessmentTitle: widget.assessment.title,
-      category: widget.assessment.category,
-      correctCount: correctCount,
-      totalQuestions: totalQuestions,
-      scorePercentage: scorePercentage,
-      userAnswers: widget.userAnswers,
-      questions: questionsData,
-      timestamp: DateTime.now(),
-    );
-
-    try {
-      await ref.read(assessmentServiceProvider).saveResult(result);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save result: $e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    int correctCount = 0;
-    widget.userAnswers.forEach((qIndex, aIndex) {
-      if (widget.assessment.questions[qIndex].correctOptionIndex == aIndex) {
-        correctCount++;
-      }
-    });
-
-    final totalQuestions = widget.assessment.questions.length;
-    final scorePercentage = (correctCount / totalQuestions) * 100;
-    final isPassed = scorePercentage >= 70;
+    final isPassed = result.scorePercentage >= 70;
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 280.0,
-            automaticallyImplyLeading: false,
+            expandedHeight: 250.0,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
+              title: Text(
+                result.assessmentTitle,
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+              ),
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -120,33 +42,28 @@ class _AssessmentResultScreenState extends ConsumerState<AssessmentResultScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 20),
                     Icon(
-                      isPassed ? Icons.emoji_events_outlined : Icons.sentiment_dissatisfied_outlined,
-                      size: 80,
+                      isPassed ? Icons.stars : Icons.assignment_late,
+                      size: 64,
                       color: Colors.white,
-                    ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
-                    const SizedBox(height: 16),
+                    ).animate().scale(),
+                    const SizedBox(height: 12),
                     Text(
-                      isPassed ? 'Test Passed!' : 'Test Not Cleared',
+                      'Score: ${result.scorePercentage.toInt()}%',
                       style: GoogleFonts.outfit(
-                        fontSize: 28,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
                     Text(
-                      'Score: ${scorePercentage.toInt()}%',
+                      DateFormat('MMM dd, yyyy').format(result.timestamp),
                       style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.8),
                       ),
                     ),
-                    if (_isSaving)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8.0),
-                        child: Text('Saving result...', style: TextStyle(color: Colors.white, fontSize: 12)),
-                      ),
                   ],
                 ),
               ),
@@ -158,7 +75,7 @@ class _AssessmentResultScreenState extends ConsumerState<AssessmentResultScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSummaryCards(correctCount, totalQuestions),
+                  _buildSummaryCards(),
                   const SizedBox(height: 32),
                   Text(
                     'Performance Analysis',
@@ -174,14 +91,6 @@ class _AssessmentResultScreenState extends ConsumerState<AssessmentResultScreen>
                   const SizedBox(height: 16),
                   _buildQuestionList(),
                   const SizedBox(height: 40),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 56),
-                    ),
-                    child: const Text('Back to Dashboard'),
-                  ),
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -191,14 +100,14 @@ class _AssessmentResultScreenState extends ConsumerState<AssessmentResultScreen>
     );
   }
 
-  Widget _buildSummaryCards(int correct, int total) {
+  Widget _buildSummaryCards() {
     return Row(
       children: [
-        _buildStatCard('Correct', '$correct', Colors.green),
+        _buildStatCard('Correct', '${result.correctCount}', Colors.green),
         const SizedBox(width: 16),
-        _buildStatCard('Incorrect', '${total - correct}', Colors.red),
+        _buildStatCard('Incorrect', '${result.totalQuestions - result.correctCount}', Colors.red),
         const SizedBox(width: 16),
-        _buildStatCard('Accuracy', '${((correct / total) * 100).toInt()}%', Colors.blue),
+        _buildStatCard('Category', result.category, Colors.blue),
       ],
     );
   }
@@ -214,7 +123,17 @@ class _AssessmentResultScreenState extends ConsumerState<AssessmentResultScreen>
         ),
         child: Column(
           children: [
-            Text(value, style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+            Text(
+              value, 
+              style: GoogleFonts.outfit(
+                fontSize: value.length > 8 ? 16 : 22, 
+                fontWeight: FontWeight.bold, 
+                color: color
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             Text(label, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textMuted)),
           ],
         ),
@@ -223,13 +142,13 @@ class _AssessmentResultScreenState extends ConsumerState<AssessmentResultScreen>
   }
 
   Widget _buildSectionAnalysis() {
-    // Group correct answers by section
     final Map<String, List<bool>> sectionResults = {};
-    for (int i = 0; i < widget.assessment.questions.length; i++) {
-        final q = widget.assessment.questions[i];
-        final section = q.section;
-        final isCorrect = widget.assessment.questions[i].correctOptionIndex == widget.userAnswers[i];
-        sectionResults.putIfAbsent(section, () => []).add(isCorrect);
+    for (int i = 0; i < result.questions.length; i++) {
+        final q = result.questions[i];
+        final section = q['section'] ?? 'General';
+        final correctIdx = q['correctOptionIndex'] as int;
+        final userAns = result.userAnswers[i];
+        sectionResults.putIfAbsent(section, () => []).add(correctIdx == userAns);
     }
 
     final List<_SectionData> plotData = sectionResults.entries.map((e) {
@@ -263,11 +182,13 @@ class _AssessmentResultScreenState extends ConsumerState<AssessmentResultScreen>
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: widget.assessment.questions.length,
+      itemCount: result.questions.length,
       itemBuilder: (context, index) {
-        final q = widget.assessment.questions[index];
-        final userAns = widget.userAnswers[index];
-        final isCorrect = q.correctOptionIndex == userAns;
+        final q = result.questions[index];
+        final userAns = result.userAnswers[index];
+        final correctIdx = q['correctOptionIndex'] as int;
+        final isCorrect = correctIdx == userAns;
+        final options = List<String>.from(q['options'] ?? []);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -294,15 +215,15 @@ class _AssessmentResultScreenState extends ConsumerState<AssessmentResultScreen>
                 ],
               ),
               const SizedBox(height: 8),
-              Text(q.text, style: const TextStyle(fontSize: 14)),
+              Text(q['text'] ?? '', style: const TextStyle(fontSize: 14)),
               const SizedBox(height: 12),
               Text(
-                'Correct Answer: ${q.correctOptionIndex < q.options.length ? q.options[q.correctOptionIndex] : "N/A"}',
+                'Correct Answer: ${correctIdx < options.length ? options[correctIdx] : "N/A"}',
                 style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
               ),
               if (!isCorrect)
                 Text(
-                  'Your Answer: ${userAns != null && userAns < q.options.length ? q.options[userAns] : "Not Answered"}',
+                  'Your Answer: ${userAns != null && userAns < options.length ? options[userAns] : "Not Answered"}',
                   style: const TextStyle(color: Colors.red, fontSize: 12),
                 ),
             ],

@@ -300,6 +300,7 @@ class _ActiveInterviewScreenState extends ConsumerState<ActiveInterviewScreen> {
           mode: widget.mode,
           topic: widget.topic,
           sessionData: _sessionHistory,
+          isVoice: false,
         ),
       ),
     );

@@ -1,12 +1,53 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/assessment.dart';
+import '../models/assessment_result.dart';
+
+final assessmentServiceProvider = Provider<AssessmentService>((ref) {
+  return AssessmentService();
+});
 
 class AssessmentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instanceFor(
     app: Firebase.app(),
     databaseId: 'intellitrain',
   );
+
+  CollectionReference get _usersCollection => _firestore.collection('users');
+
+  // Save assessment result
+  Future<void> saveResult(AssessmentResult result) async {
+    try {
+      await _usersCollection
+          .doc(result.userId)
+          .collection('assessment_history')
+          .doc(result.id)
+          .set(result.toMap());
+    } catch (e) {
+      print('Error saving assessment result: $e');
+      throw e;
+    }
+  }
+
+  // Get user assessment history
+  Stream<List<AssessmentResult>> getUserResults(String userId, {String? category}) {
+    var query = _usersCollection
+        .doc(userId)
+        .collection('assessment_history')
+        .orderBy('timestamp', descending: true);
+    
+    return query.snapshots().map((snapshot) {
+      final results = snapshot.docs.map((doc) {
+        return AssessmentResult.fromMap(doc.data(), doc.id);
+      }).toList();
+
+      if (category != null && category != 'All') {
+        return results.where((r) => r.category == category).toList();
+      }
+      return results;
+    });
+  }
 
   // Fetch all assessments from Firestore
   // Questions are managed via the admin panel

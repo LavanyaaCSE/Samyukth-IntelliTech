@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/app_colors.dart';
 import '../../models/assessment.dart';
 import 'active_assessment_screen.dart';
+import 'assessment_history_screen.dart';
 import '../../services/assessment_service.dart';
 
 class AssessmentListScreen extends ConsumerWidget {
@@ -18,11 +19,19 @@ class AssessmentListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Assessments'),
-        // PRODUCTION NOTE: Questions are managed via the Admin Panel
-        // End users can only view and take assessments
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AssessmentHistoryScreen()),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: StreamBuilder<List<Assessment>>(
-        stream: assessmentService.getAssessments(),
+        stream: ref.watch(assessmentServiceProvider).getAssessments(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
              return const Center(child: CircularProgressIndicator());
@@ -56,8 +65,26 @@ class AssessmentListScreen extends ConsumerWidget {
 
           return ListView.builder(
             padding: const EdgeInsets.all(24),
-            itemCount: assessments.length,
+            itemCount: assessments.length + 1,
             itemBuilder: (context, index) {
+              if (index == assessments.length) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0, bottom: 24.0),
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AssessmentHistoryScreen()),
+                    ),
+                    icon: const Icon(Icons.history),
+                    label: const Text('View Test History'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 56),
+                      side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                );
+              }
               final test = assessments[index];
               return _buildTestCard(context, test);
             },
