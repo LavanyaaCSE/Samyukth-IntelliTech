@@ -1,72 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/app_colors.dart';
 import '../../models/assessment.dart';
 import 'active_assessment_screen.dart';
+import '../../services/assessment_service.dart';
 
-class AssessmentListScreen extends StatelessWidget {
+class AssessmentListScreen extends ConsumerWidget {
   const AssessmentListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Mock Data
-    final assessments = [
-      Assessment(
-        id: '1',
-        title: 'TCS NQT Mock - Verbal',
-        durationMinutes: 45,
-        category: 'Aptitude',
-        questions: [
-          Question(
-            id: 'q1',
-            text: 'Choose the correct synonym for "Abundant":',
-            options: ['Scanty', 'Plentiful', 'Rare', 'Limited'],
-            correctOptionIndex: 1,
-            concept: 'Vocabulary',
-            difficulty: 'Easy',
-            section: 'Verbal',
-          ),
-          Question(
-            id: 'q2',
-            text: 'Rearrange the following sentences to form a coherent paragraph...',
-            options: ['ABCD', 'BDCA', 'ACBD', 'DCBA'],
-            correctOptionIndex: 2,
-            concept: 'Sentence Rearrangement',
-            difficulty: 'Medium',
-            section: 'Verbal',
-          ),
-        ],
-      ),
-      Assessment(
-        id: '2',
-        title: 'Standard Aptitude Test',
-        durationMinutes: 60,
-        category: 'Reasoning',
-        questions: [
-          Question(
-            id: 'q3',
-            text: 'A train 150m long is running at 54 km/hr. How long will it take to pass a standing man?',
-            options: ['10 sec', '12 sec', '15 sec', '8 sec'],
-            correctOptionIndex: 0,
-            concept: 'Time & Distance',
-            difficulty: 'Medium',
-            section: 'Quant',
-          ),
-        ],
-      ),
-    ];
+  Widget build(BuildContext context, WidgetRef ref) {
+    // We instantiate logic here or ideally via a provider
+    final assessmentService = AssessmentService();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Assessments'),
+        // PRODUCTION NOTE: Questions are managed via the Admin Panel
+        // End users can only view and take assessments
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(24),
-        itemCount: assessments.length,
-        itemBuilder: (context, index) {
-          final test = assessments[index];
-          return _buildTestCard(context, test);
+      body: StreamBuilder<List<Assessment>>(
+        stream: assessmentService.getAssessments(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+             return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+             return Center(child: Text('Error loading tests: ${snapshot.error}'));
+          }
+          
+          final assessments = snapshot.data ?? [];
+
+          if (assessments.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.folder_open, size: 64, color: AppColors.textMuted),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No assessments found in database.',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please add assessments via the admin panel.',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(24),
+            itemCount: assessments.length,
+            itemBuilder: (context, index) {
+              final test = assessments[index];
+              return _buildTestCard(context, test);
+            },
+          );
         },
       ),
     );
