@@ -16,12 +16,43 @@ class ResumeScreen extends ConsumerStatefulWidget {
   ConsumerState<ResumeScreen> createState() => _ResumeScreenState();
 }
 
-class _ResumeScreenState extends ConsumerState<ResumeScreen> {
+class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   bool _isLoading = false;
   Map<String, dynamic>? _analysisResult;
   String? _fileName;
+  final TextEditingController _jdController = TextEditingController();
+  bool _isJdAnalysis = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        _resetAnalysis();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _jdController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickAndAnalyzeFile() async {
+    // Validate JD if in Job Match mode
+    if (_tabController.index == 1 && _jdController.text.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter a Job Description first.'), backgroundColor: Colors.orange),
+        );
+      }
+      return;
+    }
+
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -48,10 +79,22 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
            throw 'Could not extract text from this PDF.';
         }
 
-        // Call Gemini Service with TEXT
-        final jsonString = await ref.read(geminiServiceProvider).analyzeResume(
-          text: extractedText,
-        );
+        // Call Gemini Service based on Tab Index
+        String jsonString;
+        if (_tabController.index == 1) {
+           // Job Match Mode
+           jsonString = await ref.read(geminiServiceProvider).analyzeResumeWithJobDescription(
+            resumeText: extractedText,
+            jobDescription: _jdController.text.trim(),
+          );
+          _isJdAnalysis = true;
+        } else {
+           // General Mode
+           jsonString = await ref.read(geminiServiceProvider).analyzeResume(
+            text: extractedText,
+          );
+          _isJdAnalysis = false;
+        }
 
         if (jsonString.startsWith('{') || jsonString.startsWith('[')) {
           final decoded = jsonDecode(jsonString);
@@ -72,6 +115,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Analysis failed: $e'), backgroundColor: Colors.red),
         );
+        _resetAnalysis(); // Reset on failure to allow retry
       }
     } finally {
       if (mounted) {
@@ -81,10 +125,13 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
   }
 
   void _resetAnalysis() {
-    setState(() {
-      _fileName = null;
-      _analysisResult = null;
-    });
+    if (mounted) {
+      setState(() {
+        _fileName = null;
+        _analysisResult = null;
+        // Do not clear JD controller so user doesn't have to re-paste
+      });
+    }
   }
 
   @override
@@ -92,23 +139,63 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Resume AI'),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.textMuted,
+          indicatorColor: AppColors.primary,
+          tabs: const [
+            Tab(text: 'General ATS Scan'),
+            Tab(text: 'Job Description Match'),
+          ],
+        ),
         actions: [
           if (_analysisResult != null)
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _resetAnalysis,
-              tooltip: 'Upload New Resume',
+              tooltip: 'Scan New Resume',
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_analysisResult == null) ...[
-              _buildUploadSection(context),
-            ] else ...[
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Tab 1: General
+          _buildTabContent(isJobMatch: false),
+          // Tab 2: Job Match
+          _buildTabContent(isJobMatch: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabContent({required bool isJobMatch}) {
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Extracting Text & Analyzing...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_analysisResult != null) {
+      // Ensure we are showing the result meant for this tab
+      // (Though _resetAnalysis clears it on tab switch, this is a safety check)
+      if (isJobMatch == _isJdAnalysis) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
                 'Analysis Results for $_fileName',
                 style: Theme.of(context).textTheme.titleLarge,
@@ -119,31 +206,69 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
               _buildImprovementTips(),
               const SizedBox(height: 16),
               _buildKeywordsSection(),
+              const SizedBox(height: 32),
+              _buildVersionTracking(),
             ],
-            
-            if (_isLoading)
-               const Center(
-                 child: Padding(
-                   padding: EdgeInsets.all(32.0),
-                   child: Column(
-                     children: [
-                       CircularProgressIndicator(),
-                       SizedBox(height: 16),
-                       Text('Extracting Text & Analyzing...'),
-                     ],
-                   ),
-                 ),
-               ),
-               
-            const SizedBox(height: 32),
-            _buildVersionTracking(),
+          ),
+        );
+      } else {
+         return Center(child: Text("Switch to ${isJobMatch ? 'General' : 'Job Match'} tab to view results."));
+      }
+    }
+
+    // Default: Show Upload View
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          if (isJobMatch) ...[
+            _buildJDInputSection(),
+            const SizedBox(height: 24),
           ],
-        ),
+          _buildUploadBox(isJobMatch),
+          const SizedBox(height: 32),
+           // Show version history on main screen too if desired, or just keep it simple
+           _buildVersionTracking(),
+        ],
       ),
     );
   }
 
-  Widget _buildUploadSection(BuildContext context) {
+  Widget _buildJDInputSection() {
+     return Column(
+       crossAxisAlignment: CrossAxisAlignment.start,
+       children: [
+         Text(
+           'Target Job Description',
+           style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+         ),
+         const SizedBox(height: 8),
+         Container(
+            child: TextField(
+              controller: _jdController,
+              maxLines: 6,
+              minLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Paste the Job Description here...',
+                hintStyle: GoogleFonts.outfit(color: AppColors.textMuted),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                ),
+                filled: true,
+                fillColor: AppColors.surface,
+              ),
+            ),
+          ),
+       ],
+     );
+  }
+
+  Widget _buildUploadBox(bool isJobMatch) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),
@@ -157,7 +282,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
           const Icon(Icons.cloud_upload_outlined, size: 48, color: AppColors.primary),
           const SizedBox(height: 16),
           Text(
-            'Upload your Resume',
+            isJobMatch ? 'Upload Resume to Match' : 'Upload your Resume',
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -170,11 +295,11 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: _isLoading ? null : _pickAndAnalyzeFile,
+            onPressed: _pickAndAnalyzeFile,
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(200, 50),
             ),
-            child: const Text('Select PDF File'),
+            child: const Text('Select PDF & Analyze'),
           ),
         ],
       ),
@@ -212,7 +337,9 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ATS Compatibility: ${score > 70 ? 'Good' : (score > 40 ? 'Average' : 'Poor')}',
+                  _isJdAnalysis 
+                      ? 'Job Match Score: ${score > 70 ? 'Excellent' : (score > 40 ? 'Moderate' : 'Low')}'
+                      : 'ATS Compatibility: ${score > 70 ? 'Good' : (score > 40 ? 'Average' : 'Poor')}',
                   style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
@@ -261,7 +388,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> {
          Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
-            'Recommended Keywords',
+            'Missing Keywords',
             style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
           ),
         ),
