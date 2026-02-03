@@ -240,7 +240,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   child: Icon(icon, color: color, size: 28),
                 ),
-                const Spacer(),
+                const SizedBox(height: 12),
                 Text(
                   title,
                   style: GoogleFonts.outfit(
