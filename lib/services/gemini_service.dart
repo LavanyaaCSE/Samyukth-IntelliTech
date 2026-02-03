@@ -1,4 +1,10 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/app_constants.dart';
+
+final geminiServiceProvider = Provider<GeminiService>((ref) {
+  return GeminiService(apiKey: AppConstants.geminiApiKey);
+});
 
 class GeminiService {
   final String apiKey;

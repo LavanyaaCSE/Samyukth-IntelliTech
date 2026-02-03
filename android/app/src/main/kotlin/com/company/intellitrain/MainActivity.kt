@@ -1,4 +1,4 @@
-package com.intellitrain.intellitrain
+package com.company.intellitrain
 
 import io.flutter.embedding.android.FlutterActivity
 

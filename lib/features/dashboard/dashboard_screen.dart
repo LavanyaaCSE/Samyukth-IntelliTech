@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../../core/app_colors.dart';
+import '../../services/auth_service.dart';
 import 'weekly_plan_widget.dart';
 import '../assessments/assessment_list_screen.dart';
 import '../resume/resume_screen.dart';
 import '../interviews/interviews_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -51,7 +55,13 @@ class DashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildWelcomeSection(),
+                  authState.when(
+                    data: (user) => _buildWelcomeSection(
+                      user?.displayName ?? user?.email?.split('@')[0] ?? 'User'
+                    ),
+                    loading: () => _buildWelcomeSection('User'),
+                    error: (_, __) => _buildWelcomeSection('User'),
+                  ),
                   const SizedBox(height: 32),
                   _buildReadinessScore(),
                   const SizedBox(height: 32),
@@ -75,12 +85,12 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWelcomeSection() {
+  Widget _buildWelcomeSection(String userName) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Hello, Alex!',
+          'Hello, $userName!',
           style: GoogleFonts.outfit(
             fontSize: 28,
             fontWeight: FontWeight.bold,
