@@ -6,8 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:read_pdf_text/read_pdf_text.dart';
+import 'package:intl/intl.dart';
 import '../../core/app_colors.dart';
 import '../../services/gemini_service.dart';
+import '../../services/resume_service.dart';
+import '../../services/auth_service.dart';
+import '../../models/resume_analysis.dart';
 
 class ResumeScreen extends ConsumerStatefulWidget {
   const ResumeScreen({super.key});
@@ -81,7 +85,8 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
 
         // Call Gemini Service based on Tab Index
         String jsonString;
-        if (_tabController.index == 1) {
+        final isJobMatch = _tabController.index == 1;
+        if (isJobMatch) {
            // Job Match Mode
            jsonString = await ref.read(geminiServiceProvider).analyzeResumeWithJobDescription(
             resumeText: extractedText,
@@ -106,6 +111,19 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
           setState(() {
             _analysisResult = decoded;
           });
+
+          // Save to Firestore
+          final user = ref.read(authServiceProvider).currentUser;
+          if (user != null) {
+              await ref.read(resumeServiceProvider).saveAnalysis(
+                userId: user.uid,
+                analysisData: decoded as Map<String, dynamic>,
+                fileName: _fileName ?? 'Unknown Resume',
+                type: isJobMatch ? 'job_match' : 'general',
+                jobDescription: isJobMatch ? _jdController.text.trim() : null,
+              );
+          }
+
         } else {
           throw 'Invalid response format';
         }
@@ -207,7 +225,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
               const SizedBox(height: 16),
               _buildKeywordsSection(),
               const SizedBox(height: 32),
-              _buildVersionTracking(),
+              _buildVersionTracking(isJobMatch),
             ],
           ),
         );
@@ -228,7 +246,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
           _buildUploadBox(isJobMatch),
           const SizedBox(height: 32),
            // Show version history on main screen too if desired, or just keep it simple
-           _buildVersionTracking(),
+           _buildVersionTracking(isJobMatch),
         ],
       ),
     );
@@ -429,22 +447,59 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildVersionTracking() {
+  Widget _buildVersionTracking(bool isJobMatch) {
+    final user = ref.watch(authServiceProvider).currentUser;
+    // If no user logic handling is preferred here, we can show a login prompt or just empty.
+    if (user == null) {
+      return const SizedBox.shrink(); 
+    }
+    
+    final type = isJobMatch ? 'job_match' : 'general';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Version History',
+          isJobMatch ? 'Job Match History' : 'General Analysis History',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
-        _buildVersionItem('Resume_V2_Final.pdf', '82%', '2 days ago'),
-        _buildVersionItem('Resume_V1_Base.pdf', '65%', '1 week ago'),
+        StreamBuilder<List<ResumeAnalysis>>(
+            stream: ref.watch(resumeServiceProvider).getUserHistory(user.uid, type: type),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: CircularProgressIndicator(),
+                ));
+              }
+              if (snapshot.hasError) {
+                return Text('Error loading history', style: TextStyle(color: Colors.red[300]));
+              }
+              
+              final history = snapshot.data ?? [];
+              if (history.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text('No previous analyses found.'),
+                );
+              }
+
+              // Limit to last 5 for cleanliness if list gets long, 
+              // but for now scrolling column inside parent scroll view might be tricky 
+              // if not handled carefully. Since the parent is SingleChildScrollView, 
+              // we can just list them.
+              return Column(
+                children: history.map((item) => _buildVersionItem(item)).toList(),
+              );
+            },
+        ),
       ],
     );
   }
 
-  Widget _buildVersionItem(String name, String score, String date) {
+  Widget _buildVersionItem(ResumeAnalysis item) {
+    final dateFormat = DateFormat.yMMMd().add_jm(); // e.g. Sep 10, 2024 5:30 PM
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
@@ -456,31 +511,73 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
         ),
         child: Row(
           children: [
-            const Icon(Icons.insert_drive_file_outlined, color: AppColors.textSecondary),
+            Icon(
+              item.type == 'job_match' ? Icons.work_outline : Icons.description_outlined, 
+              color: AppColors.textSecondary
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                  Text(date, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  Text(
+                    item.fileName, 
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    dateFormat.format(item.timestamp), 
+                    style: TextStyle(fontSize: 12, color: AppColors.textMuted)
+                  ),
                 ],
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.secondary.withOpacity(0.1),
+                color: _getScoreColor(item.score).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                score,
-                style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold),
+                '${item.score.toInt()}%',
+                style: TextStyle(
+                  color: _getScoreColor(item.score), 
+                  fontWeight: FontWeight.bold
+                ),
               ),
             ),
+            if (_analysisResult == null || _analysisResult!['id'] != item.id) // Only show delete if not currently viewing? Or just valid action
+               IconButton(
+                 icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                 onPressed: () async {
+                    // Confirm delete
+                    final confirm = await showDialog<bool>(
+                      context: context, 
+                      builder: (c) => AlertDialog(
+                        title: const Text('Delete Record?'),
+                        content: const Text('This action cannot be undone.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                        ],
+                      )
+                    );
+                    
+                    if (confirm == true) {
+                      await ref.read(resumeServiceProvider).deleteAnalysis(item.userId, item.id);
+                    }
+                 },
+               ),
           ],
         ),
       ),
     );
+  }
+  
+  Color _getScoreColor(double score) {
+    if (score > 70) return Colors.green;
+    if (score > 40) return Colors.orange;
+    return Colors.red;
   }
 }
