@@ -67,10 +67,18 @@ class GeminiService {
     return _generateContent(prompt);
   }
 
-  Future<String> generateInterviewQuestion(String mode, String topic) async {
+  Future<String> generateInterviewQuestion(String mode, String topic, {String? jobDescription}) async {
     try {
       final model = FirebaseVertexAI.instance.generativeModel(model: 'gemini-2.5-flash');
-      final prompt = "Generate a single professional and challenging interview question for a $mode interview context. The specific topic is $topic. Return ONLY the question text without any markdown or quotes.";
+      
+      String prompt = "Generate a single professional and challenging interview question for a $mode interview context. The specific topic/role is $topic.";
+      
+      if (jobDescription != null && jobDescription.isNotEmpty) {
+        prompt += "\n\nUse the following Job Description to tailor the question:\n$jobDescription";
+      }
+      
+      prompt += "\n\nReturn ONLY the question text without any markdown or quotes.";
+      
       final response = await model.generateContent([Content.text(prompt)]);
       return response.text?.trim() ?? "Could not generate question.";
     } catch (e) {

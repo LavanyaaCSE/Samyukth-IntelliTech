@@ -2,9 +2,78 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import 'active_interview_screen.dart';
 
 class InterviewsScreen extends StatelessWidget {
   const InterviewsScreen({super.key});
+
+  void _showInterviewSetup(BuildContext context, String mode) {
+    final topicController = TextEditingController();
+    final jdController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Start $mode', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Enter the details below to customize your AI interview session.',
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: topicController,
+              decoration: const InputDecoration(
+                labelText: 'Job Role / Topic',
+                hintText: 'e.g. Senior Flutter Developer',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: jdController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Job Description (Optional)',
+                hintText: 'Paste the JD here for tailored questions...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (topicController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a Job Role or Topic')),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ActiveInterviewScreen(
+                    mode: mode,
+                    topic: topicController.text.trim(),
+                    jobDescription: jdController.text.trim().isEmpty ? null : jdController.text.trim(),
+                  ),
+                ),
+              );
+            },
+            child: const Text('Start Interview'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +146,7 @@ class InterviewsScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {},
+          onTap: () => _showInterviewSetup(context, title),
           borderRadius: BorderRadius.circular(24),
           child: Padding(
             padding: const EdgeInsets.all(24.0),

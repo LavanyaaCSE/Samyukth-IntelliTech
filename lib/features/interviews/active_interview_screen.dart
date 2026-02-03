@@ -5,15 +5,18 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
 import '../../services/gemini_service.dart';
+import 'interview_summary_screen.dart';
 
 class ActiveInterviewScreen extends ConsumerStatefulWidget {
   final String mode;
   final String topic;
+  final String? jobDescription;
 
   const ActiveInterviewScreen({
     super.key,
     required this.mode,
     required this.topic,
+    this.jobDescription,
   });
 
   @override
@@ -26,6 +29,9 @@ class _ActiveInterviewScreenState extends ConsumerState<ActiveInterviewScreen> {
   bool _isLoading = false;
   Map<String, dynamic>? _feedback;
   String? _errorMessage;
+  int _questionCount = 1;
+  static const int _totalQuestions = 5;
+  final List<Map<String, dynamic>> _sessionHistory = [];
 
   @override
   void initState() {
@@ -52,6 +58,7 @@ class _ActiveInterviewScreenState extends ConsumerState<ActiveInterviewScreen> {
       final question = await ref.read(geminiServiceProvider).generateInterviewQuestion(
             widget.mode,
             widget.topic,
+            jobDescription: widget.jobDescription,
           );
       
       if (question.contains('"error"')) {
@@ -88,6 +95,16 @@ class _ActiveInterviewScreenState extends ConsumerState<ActiveInterviewScreen> {
 
       if (jsonString.startsWith('{')) {
         final decoded = jsonDecode(jsonString);
+        
+        // Store for history
+        _sessionHistory.add({
+          'question': _currentQuestion,
+          'answer': _answerController.text.trim(),
+          'rating': decoded['rating'],
+          'feedback': decoded['feedback'],
+          'improved_answer': decoded['improved_answer'],
+        });
+
         setState(() {
           _feedback = decoded;
         });
@@ -109,7 +126,7 @@ class _ActiveInterviewScreenState extends ConsumerState<ActiveInterviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.mode} Session'),
+        title: Text('${widget.mode} (${_questionCount}/$_totalQuestions)'),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
@@ -190,12 +207,19 @@ class _ActiveInterviewScreenState extends ConsumerState<ActiveInterviewScreen> {
               _buildFeedbackCard(),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _loadNextQuestion,
-                icon: const Icon(Icons.arrow_forward),
-                label: const Text('Next Question'),
+                onPressed: () {
+                  if (_questionCount < _totalQuestions) {
+                    setState(() => _questionCount++);
+                    _loadNextQuestion();
+                  } else {
+                     _finishInterview();
+                  }
+                },
+                icon: Icon(_questionCount < _totalQuestions ? Icons.arrow_forward : Icons.check_circle),
+                label: Text(_questionCount < _totalQuestions ? 'Next Question' : 'Finish Interview'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 56),
-                  backgroundColor: AppColors.secondary,
+                  backgroundColor: _questionCount < _totalQuestions ? AppColors.secondary : AppColors.primary,
                   foregroundColor: Colors.white,
                 ),
               ),
@@ -266,5 +290,18 @@ class _ActiveInterviewScreenState extends ConsumerState<ActiveInterviewScreen> {
         ],
       ),
     ).animate().fadeIn().slideY(begin: 0.1);
+  }
+
+  void _finishInterview() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InterviewSummaryScreen(
+          mode: widget.mode,
+          topic: widget.topic,
+          sessionData: _sessionHistory,
+        ),
+      ),
+    );
   }
 }
