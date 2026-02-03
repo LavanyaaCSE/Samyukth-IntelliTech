@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "450979258698-3esj795aagla658vjl9ti2dh5ij1oud6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.company.intellitrain",
+            "certificate_hash": "7a6671dc05fce660a9c7a9c60c5f12323af3369d"
+          }
+        },
+        {
           "client_id": "450979258698-30opfq3nldjdf6p6unsdnkeoqks0ambs.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,13 @@
             {
               "client_id": "450979258698-30opfq3nldjdf6p6unsdnkeoqks0ambs.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "450979258698-ki50gdt5greh3br2laj4eb8p1j1tl3hr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.company.intellitrain"
+              }
             }
           ]
         }
