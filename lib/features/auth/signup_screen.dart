@@ -20,15 +20,24 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _pinController = TextEditingController();
   UserRole _selectedRole = UserRole.student;
   bool _isLoading = false;
 
   Future<void> _handleSignup() async {
     if (_nameController.text.isEmpty || 
         _emailController.text.isEmpty || 
-        _passwordController.text.isEmpty) {
+        _passwordController.text.isEmpty ||
+        _pinController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+
+    if (_pinController.text.length != 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Recovery PIN must be 4 digits')),
       );
       return;
     }
@@ -47,6 +56,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
             _nameController.text.trim(),
+            _pinController.text.trim(),
           );
 
       if (mounted) {
@@ -180,39 +190,29 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              TextField(
-                                controller: _passwordController,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  labelText: 'Password',
-                                  prefixIcon: Icon(Icons.lock_outline),
-                                  helperText: 'At least 6 characters',
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              
-                              // Role Selection
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Select Your Role',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 14,
-                                    color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
+                                TextField(
+                                  controller: _passwordController,
+                                  obscureText: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Password',
+                                    prefixIcon: Icon(Icons.lock_outline),
+                                    helperText: 'At least 6 characters',
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  _buildRoleOption(UserRole.student, 'Student', Icons.school_outlined),
-                                  const SizedBox(width: 12),
-                                  _buildRoleOption(UserRole.institution, 'Institution', Icons.business_outlined),
-                                ],
-                              ),
-                              
-                              const SizedBox(height: 32),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  controller: _pinController,
+                                  obscureText: true,
+                                  keyboardType: TextInputType.number,
+                                  maxLength: 4,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Recovery PIN',
+                                    prefixIcon: Icon(Icons.security_outlined),
+                                    helperText: '4 digits to recover account',
+                                    counterText: '',
+                                  ),
+                                ),
+                              const SizedBox(height: 24),
                               ElevatedButton(
                                 onPressed: _isLoading ? null : _handleSignup,
                                 child: _isLoading 

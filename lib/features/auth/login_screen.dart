@@ -9,6 +9,7 @@ import '../dashboard/main_screen.dart';
 import 'signup_screen.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -211,16 +212,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   prefixIcon: Icon(Icons.lock_outline),
                                 ),
                               ),
-                              const SizedBox(height: 24),
-                              // Role selection
-                              Row(
-                                children: [
-                                  _buildRoleToggle(UserRole.student, 'Student', Icons.person_outline),
-                                  const SizedBox(width: 12),
-                                  _buildRoleToggle(UserRole.institution, 'Institution', Icons.business_outlined),
-                                ],
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
+                                    );
+                                  },
+                                  child: Text(
+                                    'Forgot Password?',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 13,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 8),
                               ElevatedButton(
                                 onPressed: _isLoading ? null : _handleLogin,
                                 child: _isLoading 

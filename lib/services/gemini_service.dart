@@ -109,41 +109,56 @@ class GeminiService {
     required List<Map<String, dynamic>> interviewHistory,
     required List<Map<String, dynamic>> assessmentHistory,
     required List<Map<String, dynamic>> resumeAnalyses,
+    required Map<String, double> currentScores,
     bool isNewUser = false,
   }) async {
     final prompt = """
     You are a career coach. Create a personalized weekly improvement plan for a job candidate.
 
     DETERMINING PROGRESS:
-    - If isNewUser is true: The user has no history. Assign a baseline progress of 15% (0.15) for all items to reflect that they are starting their preparation journey.
-    - If history is available: Calculate progress (0.0 to 1.0) based on their average scores and feedback.
+    Use the following EXACT progress values provided in the data below. 
+    If a progress value is 0.0, the subtitle MUST be "Start now to see progress". Otherwise, provide a specific task.
+
+    Data Inputs:
+    - isNewUser: $isNewUser
+    - Calculated Scores (0.0 to 1.0): $currentScores
+    - Interview History: $interviewHistory
+    - Assessment History: $assessmentHistory
+    - Resume Analytics: $resumeAnalyses
 
     Plan Requirements:
     - Exactly 3 items (Mock Interviews, Test Assessments, Resume Improvement).
-    - Very short, crisp titles (2-3 words).
-    
-    Data Inputs:
-    - isNewUser: $isNewUser
-    - Interview Data: $interviewHistory
-    - Assessment Data: $assessmentHistory
-    - Resume Data: $resumeAnalyses
+    - Titles: Very short (2-3 words).
+    - Subtitles: 
+       * If progress is 0.0: Exactly "Start now to see progress"
+       * If progress > 0.0: A specific helpful task based on their history.
 
-    INSTRUCTIONS:
-    - Item 1 (Category: 'behavioral'): Focus on feedback from recent interviews.
-    - Item 2 (Category: 'technical'): Focus on low assessment categories or technical gaps.
-    - Item 3 (Category: 'resume'): Focus on missing keywords or resume improvements.
-    - PROGRESS CALCULATION: If the user has NO history in a category, start them at 10% (0.1) progress. If they have some history but need improvement, set progress between 30% (0.3) and 60% (0.6). Only set >80% if they are performing exceptionally well.
-    
+    Categories:
+    - Item 1 (Category: 'behavioral'): Map to 'interview' score.
+    - Item 2 (Category: 'technical'): Map to 'assessment' score.
+    - Item 3 (Category: 'resume'): Map to 'resume' score.
+
     Provide the response in raw JSON format:
     {
       "plan": [
         {
           "title": "Interview Skills",
-          "subtitle": "Specific task based on interview feedback",
-          "progress": 0.15, // Example: Starting progress for a new goal
+          "subtitle": "...", 
+          "progress": ${currentScores['interview']},
           "category": "behavioral"
         },
-        ...
+        {
+          "title": "Technical Prep",
+          "subtitle": "...",
+          "progress": ${currentScores['assessment']},
+          "category": "technical"
+        },
+        {
+          "title": "Resume Polish",
+          "subtitle": "...",
+          "progress": ${currentScores['resume']},
+          "category": "resume"
+        }
       ]
     }
     """;

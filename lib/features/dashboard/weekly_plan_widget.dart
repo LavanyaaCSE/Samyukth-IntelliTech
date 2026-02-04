@@ -47,10 +47,12 @@ class WeeklyPlanWidget extends ConsumerWidget {
         planAsync.when(
           data: (items) {
             if (items.isEmpty) {
-              return const Center(child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('No plan generated yet. Take some tests!'),
-              ));
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(),
+                ),
+              );
             }
             return Column(
               children: items.map((item) {

@@ -1,7 +1,11 @@
 enum UserRole {
   student,
   admin,
-  institution,
+}
+
+enum SubscriptionPlan {
+  free,
+  pro,
 }
 
 class AppUser {
@@ -9,6 +13,7 @@ class AppUser {
   final String email;
   final String fullName;
   final UserRole role;
+  final SubscriptionPlan plan;
   final String? profileImageUrl;
 
   AppUser({
@@ -16,8 +21,12 @@ class AppUser {
     required this.email,
     required this.fullName,
     required this.role,
+    this.plan = SubscriptionPlan.free,
     this.profileImageUrl,
+    this.recoveryPin,
   });
+
+  final String? recoveryPin;
 
   Map<String, dynamic> toMap() {
     return {
@@ -25,7 +34,9 @@ class AppUser {
       'email': email,
       'fullName': fullName,
       'role': role.index,
+      'plan': plan.index,
       'profileImageUrl': profileImageUrl,
+      'recoveryPin': recoveryPin,
     };
   }
 
@@ -35,7 +46,9 @@ class AppUser {
       email: map['email'],
       fullName: map['fullName'],
       role: UserRole.values[map['role'] ?? 0],
+      plan: SubscriptionPlan.values[map['plan'] ?? 0],
       profileImageUrl: map['profileImageUrl'],
+      recoveryPin: map['recoveryPin'],
     );
   }
 }

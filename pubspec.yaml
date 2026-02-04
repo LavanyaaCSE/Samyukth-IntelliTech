@@ -61,6 +61,8 @@ dependencies:
   read_pdf_text: ^0.3.1
   http: ^1.6.0
   firebase_vertexai: ^2.2.0
+  razorpay_flutter: ^1.4.0
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:

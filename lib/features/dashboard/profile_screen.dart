@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_colors.dart';
 import '../../services/auth_service.dart';
+import '../../services/subscription_service.dart';
+import '../../models/user_model.dart';
 import '../../auth_wrapper.dart';
 import 'subscription_plan_screen.dart';
+import 'activity_history_screen.dart';
+import 'security_privacy_screen.dart';
+import 'help_support_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -11,6 +16,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    final currentPlanAsync = ref.watch(userSubscriptionProvider);
     
     return authState.when(
       data: (user) {
@@ -44,7 +50,11 @@ class ProfileScreen extends ConsumerWidget {
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 32),
-                _buildSubscriptionCard(context),
+                currentPlanAsync.when(
+                  data: (plan) => _buildSubscriptionCard(context, plan),
+                  loading: () => const CircularProgressIndicator(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
                 const SizedBox(height: 24),
                 _buildSettingsList(context, ref),
               ],
@@ -61,16 +71,23 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSubscriptionCard(BuildContext context) {
+  Widget _buildSubscriptionCard(BuildContext context, SubscriptionPlan plan) {
+    final bool isFree = plan == SubscriptionPlan.free;
+    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+        gradient: LinearGradient(
+          colors: isFree 
+            ? [Colors.blueGrey.shade700, Colors.blueGrey.shade900]
+            : [const Color(0xFFF59E0B), const Color(0xFFD97706)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
+        boxShadow: isFree ? [] : [
+          BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 20, spreadRadius: 2)
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,17 +95,19 @@ class ProfileScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'PRO PLAN',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1),
+              Text(
+                '${plan.name.toUpperCase()} PLAN',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1),
               ),
-              const Icon(Icons.workspace_premium, color: Colors.white),
+              Icon(isFree ? Icons.person_outline : Icons.workspace_premium, color: Colors.white),
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Unlimited AI Mock Interviews &\nATS Analysis included.',
-            style: TextStyle(color: Colors.white, fontSize: 13),
+          Text(
+            isFree 
+              ? 'Basic access to assessments and limited AI features.'
+              : 'Unlimited AI Mock Interviews &\nATS Analysis included.',
+            style: const TextStyle(color: Colors.white, fontSize: 13),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -99,10 +118,10 @@ class ProfileScreen extends ConsumerWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: Colors.orange.shade800,
+              foregroundColor: isFree ? Colors.blueGrey.shade900 : Colors.orange.shade800,
               minimumSize: const Size(double.infinity, 48),
             ),
-            child: const Text('Manage Subscription'),
+            child: Text(isFree ? 'Upgrade to Pro @ ₹599' : 'Manage Subscription'),
           ),
         ],
       ),
@@ -112,9 +131,24 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildSettingsList(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
-        _buildSettingTile(Icons.history, 'Activity History', () {}),
-        _buildSettingTile(Icons.security, 'Security & Privacy', () {}),
-        _buildSettingTile(Icons.help_outline, 'Help & Support', () {}),
+        _buildSettingTile(Icons.history, 'Activity History', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ActivityHistoryScreen()),
+          );
+        }),
+        _buildSettingTile(Icons.security, 'Security & Privacy', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SecurityPrivacyScreen()),
+          );
+        }),
+        _buildSettingTile(Icons.help_outline, 'Help & Support', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const HelpSupportScreen()),
+          );
+        }),
         _buildSettingTile(
           Icons.logout, 
           'Logout', 
