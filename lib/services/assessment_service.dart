@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/assessment.dart';
 import '../models/assessment_result.dart';
+import '../models/upcoming_test.dart';
 
 final assessmentServiceProvider = Provider<AssessmentService>((ref) {
   return AssessmentService();
@@ -49,6 +50,14 @@ class AssessmentService {
     });
   }
 
+  Stream<double> getAverageScore(String userId) {
+    return getUserResults(userId).map((results) {
+      if (results.isEmpty) return 0.0;
+      final total = results.fold<double>(0, (sum, r) => sum + r.scorePercentage);
+      return total / results.length;
+    });
+  }
+
   // Fetch all assessments from Firestore
   // Questions are managed via the admin panel
   Stream<List<Assessment>> getAssessments() {
@@ -80,6 +89,23 @@ class AssessmentService {
           questions: questions,
         );
       }).toList();
+    });
+  }
+
+  // Fetch upcoming scheduled tests
+  Stream<List<UpcomingTest>> getUpcomingTests() {
+    return _firestore
+        .collection('upcoming_tests')
+        .snapshots()
+        .map((snapshot) {
+      final tests = snapshot.docs
+          .map((doc) => UpcomingTest.fromMap(doc.data(), doc.id))
+          .where((test) => test.isPublished) // Filter in-memory
+          .toList();
+          
+      // Sort in-memory
+      tests.sort((a, b) => a.startTime.compareTo(b.startTime));
+      return tests;
     });
   }
 }

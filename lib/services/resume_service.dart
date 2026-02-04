@@ -38,6 +38,7 @@ class ResumeService {
         summary: analysisData['short_summary'] ?? 'No summary provided',
         improvements: List<String>.from(analysisData['key_improvements'] ?? []),
         keywords: List<String>.from(analysisData['keyword_suggestions'] ?? []),
+        extractedSkills: List<String>.from(analysisData['extracted_skills'] ?? []),
         type: type,
         timestamp: DateTime.now(),
         jobDescription: jobDescription,
@@ -81,5 +82,13 @@ class ResumeService {
       print('Error deleting analysis: $e');
       throw e;
     }
+  }
+
+  Stream<double> getAverageScore(String userId) {
+    return getUserHistory(userId).map((history) {
+      if (history.isEmpty) return 0.0;
+      final total = history.fold<double>(0, (sum, r) => sum + r.score);
+      return total / history.length;
+    });
   }
 }

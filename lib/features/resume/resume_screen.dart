@@ -164,8 +164,8 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
           unselectedLabelColor: AppColors.textMuted,
           indicatorColor: AppColors.primary,
           tabs: const [
-            Tab(text: 'General ATS Scan'),
-            Tab(text: 'Job Description Match'),
+            Tab(text: 'ATS Score check'),
+            Tab(text: 'Compare with Specific JD'),
           ],
         ),
         actions: [
@@ -301,7 +301,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
           const Icon(Icons.cloud_upload_outlined, size: 48, color: AppColors.primary),
           const SizedBox(height: 16),
           Text(
-            isJobMatch ? 'Upload Resume to Match' : 'Upload your Resume',
+            isJobMatch ? 'Upload Resume to Match with JD' : 'ATS Score check',
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -309,7 +309,7 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
           ),
           const SizedBox(height: 4),
           Text(
-            'Support PDF (Max 5MB)',
+            isJobMatch ? 'See how well you fit a specific role' : 'Powers your personalized Job Match dashboard',
             style: GoogleFonts.outfit(color: AppColors.textMuted),
           ),
           const SizedBox(height: 24),

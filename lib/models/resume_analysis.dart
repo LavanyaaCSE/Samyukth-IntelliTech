@@ -9,6 +9,7 @@ class ResumeAnalysis {
   final String summary;
   final List<String> improvements;
   final List<String> keywords;
+  final List<String> extractedSkills;
   final String type; // 'general' or 'job_match'
   final DateTime timestamp;
   final String? jobDescription;
@@ -21,6 +22,7 @@ class ResumeAnalysis {
     required this.summary,
     required this.improvements,
     required this.keywords,
+    required this.extractedSkills,
     required this.type,
     required this.timestamp,
     this.jobDescription,
@@ -35,6 +37,7 @@ class ResumeAnalysis {
       summary: data['short_summary'] ?? '',
       improvements: List<String>.from(data['key_improvements'] ?? []),
       keywords: List<String>.from(data['keyword_suggestions'] ?? []),
+      extractedSkills: List<String>.from(data['extracted_skills'] ?? []),
       type: data['type'] ?? 'general',
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       jobDescription: data['jobDescription'],
@@ -49,6 +52,7 @@ class ResumeAnalysis {
       'short_summary': summary,
       'key_improvements': improvements,
       'keyword_suggestions': keywords,
+      'extracted_skills': extractedSkills,
       'type': type,
       'timestamp': Timestamp.fromDate(timestamp),
       'jobDescription': jobDescription,

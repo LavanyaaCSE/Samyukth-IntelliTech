@@ -77,4 +77,12 @@ class InterviewService {
       return averages;
     });
   }
+
+  Stream<double> getOverallAverage(String userId) {
+    return getAverageScores(userId).map((averages) {
+      final validValues = averages.values.where((v) => v > 0).toList();
+      if (validValues.isEmpty) return 0.0;
+      return validValues.reduce((a, b) => a + b) / validValues.length;
+    });
+  }
 }
