@@ -27,6 +27,7 @@ class _SecurityPrivacyScreenState extends ConsumerState<SecurityPrivacyScreen> {
   bool _isSaving = false;
   bool _isEditingPin = false;
   String _currentPin = "****";
+  bool _obscurePin = true;
 
   @override
   void initState() {
@@ -217,13 +218,20 @@ class _SecurityPrivacyScreenState extends ConsumerState<SecurityPrivacyScreen> {
                     children: [
                       TextField(
                         controller: _pinController,
-                        obscureText: true,
+                        obscureText: _obscurePin,
                         keyboardType: TextInputType.number,
                         maxLength: 4,
                         decoration: InputDecoration(
                           labelText: 'New 4-Digit PIN',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           counterText: '',
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePin ? Icons.visibility_off : Icons.visibility,
+                              color: AppColors.textMuted,
+                            ),
+                            onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                          ),
                         ),
                       ),
                     ],
@@ -488,6 +496,9 @@ class _SecurityPrivacyScreenState extends ConsumerState<SecurityPrivacyScreen> {
     final currentPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
+    bool obscureOld = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
     bool isLoading = false;
 
     showDialog(
@@ -501,31 +512,43 @@ class _SecurityPrivacyScreenState extends ConsumerState<SecurityPrivacyScreen> {
             children: [
               TextField(
                 controller: currentPasswordController,
-                obscureText: true,
+                obscureText: obscureOld,
                 decoration: InputDecoration(
                   labelText: 'Current Password',
                   hintText: 'Enter current password',
                   labelStyle: GoogleFonts.outfit(),
+                  suffixIcon: IconButton(
+                    icon: Icon(obscureOld ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setDialogState(() => obscureOld = !obscureOld),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: newPasswordController,
-                obscureText: true,
+                obscureText: obscureNew,
                 decoration: InputDecoration(
                   labelText: 'New Password',
                   hintText: 'Minimum 6 characters',
                   labelStyle: GoogleFonts.outfit(),
+                  suffixIcon: IconButton(
+                    icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: confirmPasswordController,
-                obscureText: true,
+                obscureText: obscureConfirm,
                 decoration: InputDecoration(
                   labelText: 'Confirm Password',
                   hintText: 'Re-enter new password',
                   labelStyle: GoogleFonts.outfit(),
+                  suffixIcon: IconButton(
+                    icon: Icon(obscureConfirm ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                  ),
                 ),
               ),
             ],

@@ -23,6 +23,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _pinController = TextEditingController();
   UserRole _selectedRole = UserRole.student;
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscurePin = true;
 
   Future<void> _handleSignup() async {
     if (_nameController.text.isEmpty || 
@@ -192,24 +194,38 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               const SizedBox(height: 16),
                                 TextField(
                                   controller: _passwordController,
-                                  obscureText: true,
-                                  decoration: const InputDecoration(
+                                  obscureText: _obscurePassword,
+                                  decoration: InputDecoration(
                                     labelText: 'Password',
-                                    prefixIcon: Icon(Icons.lock_outline),
+                                    prefixIcon: const Icon(Icons.lock_outline),
                                     helperText: 'At least 6 characters',
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                        color: AppColors.textMuted,
+                                      ),
+                                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
                                 TextField(
                                   controller: _pinController,
-                                  obscureText: true,
+                                  obscureText: _obscurePin,
                                   keyboardType: TextInputType.number,
                                   maxLength: 4,
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     labelText: 'Recovery PIN',
-                                    prefixIcon: Icon(Icons.security_outlined),
+                                    prefixIcon: const Icon(Icons.security_outlined),
                                     helperText: '4 digits to recover account',
                                     counterText: '',
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscurePin ? Icons.visibility_off : Icons.visibility,
+                                        color: AppColors.textMuted,
+                                      ),
+                                      onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                                    ),
                                   ),
                                 ),
                               const SizedBox(height: 24),
