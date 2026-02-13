@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:screenshot_callback/screenshot_callback.dart';
+
 import '../../core/app_colors.dart';
 import '../../models/assessment.dart';
 import 'assessment_result_screen.dart';
@@ -23,7 +23,7 @@ class _ActiveAssessmentScreenState extends State<ActiveAssessmentScreen> with Wi
   Map<int, int> _selectedAnswers = {};
   bool _isFinished = false;
   bool _isEvaluating = false;
-  late ScreenshotCallback _screenshotCallback;
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -38,24 +38,16 @@ class _ActiveAssessmentScreenState extends State<ActiveAssessmentScreen> with Wi
       DeviceOrientation.portraitUp,
     ]);
 
-    // Anti-cheat: Screenshot detection
-    _initScreenshotDetection();
+    // Anti-cheat: Screenshot detection (Removed)
+    // _initScreenshotDetection();
   }
 
-  void _initScreenshotDetection() {
-    _screenshotCallback = ScreenshotCallback();
-    _screenshotCallback.initialize();
-    _screenshotCallback.addListener(() {
-      if (!_isFinished && !_isEvaluating) {
-        _autoSubmit(reason: "Screenshot detected! Test auto-submitted for security reasons.");
-      }
-    });
-  }
+
 
   @override
   void dispose() {
     _timer.cancel();
-    _screenshotCallback.dispose();
+
     WidgetsBinding.instance.removeObserver(this);
     // Restore orientation
     SystemChrome.setPreferredOrientations([

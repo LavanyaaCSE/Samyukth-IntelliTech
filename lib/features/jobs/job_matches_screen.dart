@@ -12,7 +12,10 @@ import '../../services/resume_service.dart';
 import '../../services/job_service.dart';
 import '../../services/auth_service.dart';
 import '../dashboard/dashboard_screen.dart'; // To access resumeHistoryProvider
+
+import '../../models/job.dart';
 import 'job_roadmap_screen.dart';
+
 
 class JobMatchesScreen extends ConsumerStatefulWidget {
   const JobMatchesScreen({super.key});
@@ -84,10 +87,13 @@ class _JobMatchesScreenState extends ConsumerState<JobMatchesScreen> {
     final user = ref.watch(authStateProvider).value;
     if (user == null) return const Scaffold(body: Center(child: Text("Please login to see matches")));
 
+
     final resumes = ref.watch(resumeHistoryProvider(user.uid)).value ?? [];
     final latestGeneralResume = resumes.where((r) => r.type == 'general').firstOrNull ?? resumes.firstOrNull;
-    final matchedJobs = ref.watch(jobServiceProvider).getMatchedJobs(latestGeneralResume);
+    final allJobs = ref.watch(jobsStreamProvider).value ?? [];
+    final matchedJobs = ref.watch(jobServiceProvider).getMatchedJobs(latestGeneralResume, allJobs);
     final bool isTrendingOnly = matchedJobs.any((j) => j['isTrending'] == true);
+
 
     return Scaffold(
       appBar: AppBar(
@@ -166,12 +172,12 @@ class _JobMatchesScreenState extends ConsumerState<JobMatchesScreen> {
                         padding: const EdgeInsets.all(16),
                         itemCount: matchedJobs.length,
                         itemBuilder: (context, index) {
-                          final job = matchedJobs[index];
-                          final skills = List<String>.from(job['skills']);
-                          final bool isTrending = job['isTrending'] ?? false;
-                          final double score = job['matchScore'] ?? 0.0;
+                          final matchedData = matchedJobs[index];
+                          final bool isTrending = matchedData['isTrending'] ?? false;
+                          final double score = matchedData['matchScore'] ?? 0.0;
                           
-                          return _buildJobCard(job, skills, isTrending, score, index);
+                          return _buildJobCard(matchedData, isTrending, score, index);
+
                         },
                       ),
               ),
@@ -211,7 +217,10 @@ class _JobMatchesScreenState extends ConsumerState<JobMatchesScreen> {
     );
   }
 
-  Widget _buildJobCard(Map<String, dynamic> job, List<String> skills, bool isTrending, double score, int index) {
+  Widget _buildJobCard(Map<String, dynamic> matchedData, bool isTrending, double score, int index) {
+    final job = matchedData['job'] as Job;
+    final skills = matchedData['skills'] as List<dynamic>? ?? [];
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -240,12 +249,13 @@ class _JobMatchesScreenState extends ConsumerState<JobMatchesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      job['title'],
+                      job.title,
                       style: GoogleFonts.outfit(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+
                   ],
                 ),
               ),
@@ -266,7 +276,8 @@ class _JobMatchesScreenState extends ConsumerState<JobMatchesScreen> {
               ),
             ],
           ),
-          if (job['recommendationReason'] != null) ...[
+
+          if (matchedData['recommendationReason'] != null) ...[
             const SizedBox(height: 12),
             Row(
               children: [
@@ -274,7 +285,7 @@ class _JobMatchesScreenState extends ConsumerState<JobMatchesScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    job['recommendationReason'],
+                    matchedData['recommendationReason'],
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       color: AppColors.accent,
@@ -285,6 +296,7 @@ class _JobMatchesScreenState extends ConsumerState<JobMatchesScreen> {
               ],
             ),
           ],
+
           const SizedBox(height: 16),
           Text(
             'Core Skills:',
@@ -320,10 +332,11 @@ class _JobMatchesScreenState extends ConsumerState<JobMatchesScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => JobRoadmapScreen(
-                      jobTitle: job['title'],
-                      jobSkills: skills,
+                      jobTitle: job.title,
+                      jobSkills: skills.map((s) => s.toString()).toList(),
                     ),
                   ),
+
                 );
               },
               style: ElevatedButton.styleFrom(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
 import '../../services/auth_service.dart';
 import '../../services/subscription_service.dart';
@@ -24,7 +25,12 @@ class ProfileScreen extends ConsumerWidget {
         final email = user?.email ?? 'No email';
         
         return Scaffold(
-          appBar: AppBar(title: const Text('Profile')),
+          appBar: AppBar(
+            title: Text('Profile', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            foregroundColor: AppColors.textPrimary,
+          ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(

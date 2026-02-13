@@ -24,6 +24,10 @@ import '../../models/resume_analysis.dart';
 import '../../models/interview_session.dart';
 import '../../models/upcoming_test.dart';
 import '../jobs/job_matches_screen.dart';
+import '../jobs/job_search_screen.dart';
+import 'profile_screen.dart';
+
+
 
 final upcomingTestsProvider = StreamProvider<List<UpcomingTest>>((ref) {
   return ref.watch(assessmentServiceProvider).getUpcomingTests();
@@ -64,13 +68,44 @@ class DashboardScreen extends ConsumerWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
+            leadingWidth: 80,
+            leading: Center(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(30),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.4), width: 2),
+                    ),
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.white.withOpacity(0.15),
+                      child: const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             expandedHeight: 200.0,
             floating: false,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 72, bottom: 16),
               title: Text(
                 'IntelliTrain',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               background: Container(
                 decoration: const BoxDecoration(
@@ -305,10 +340,12 @@ class DashboardScreen extends ConsumerWidget {
       }
 
       // Job Match
-      matchedJobs = ref.watch(jobServiceProvider).getMatchedJobs(latestGeneralResume);
+      final allJobs = ref.watch(jobsStreamProvider).value ?? [];
+      matchedJobs = ref.watch(jobServiceProvider).getMatchedJobs(latestGeneralResume, allJobs);
       final isTrending = matchedJobs.isNotEmpty && (matchedJobs.first['isTrending'] ?? false);
       jobMatchText = isTrending ? '${matchedJobs.length} Suggestions' : '${matchedJobs.length} Matches';
     }
+
 
     return GridView.count(
       shrinkWrap: true,
@@ -352,7 +389,18 @@ class DashboardScreen extends ConsumerWidget {
             MaterialPageRoute(builder: (context) => const JobMatchesScreen())
           ),
         ),
+        _buildFeatureCard(
+          context,
+          'Browse Jobs',
+          Icons.search,
+          AppColors.primary,
+          'Find New Work',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const JobSearchScreen())
+          ),
+        ),
       ],
+
     );
   }
 

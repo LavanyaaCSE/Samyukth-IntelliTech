@@ -1,96 +1,91 @@
 
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/job.dart';
 import '../models/resume_analysis.dart';
 
 final jobServiceProvider = Provider((ref) => JobService());
 
-class JobService {
-  // Mock job list representing available opportunities
-  final List<Map<String, dynamic>> _mockJobs = [
-    {
-      'title': 'Flutter Developer', 
-      'skills': ['flutter', 'dart', 'firebase', 'mobile'],
-      'company': 'TechFlow'
-    },
-    {
-      'title': 'Java Backend Engineer', 
-      'skills': ['java', 'spring boot', 'mysql', 'microservices'],
-      'company': 'CloudScale'
-    },
-    {
-      'title': 'Frontend Developer', 
-      'skills': ['react', 'javascript', 'typescript', 'css', 'html'],
-      'company': 'WebLabs'
-    },
-    {
-      'title': 'Python Data Analyst', 
-      'skills': ['python', 'pandas', 'sql', 'tableau', 'machine learning'],
-      'company': 'DataInsight'
-    },
-    {
-      'title': 'DevOps Engineer', 
-      'skills': ['docker', 'kubernetes', 'aws', 'ci/cd', 'linux'],
-      'company': 'OpsMaster'
-    },
-    {
-      'title': 'Full Stack Developer', 
-      'skills': ['node.js', 'react', 'mongodb', 'express', 'javascript'],
-      'company': 'CodeSync'
-    },
-    {
-      'title': 'QA Automation Engineer', 
-      'skills': ['selenium', 'testing', 'automation', 'java', 'python'],
-      'company': 'QualityFirst'
-    },
-  ];
+final jobsStreamProvider = StreamProvider<List<Job>>((ref) {
+  return ref.watch(jobServiceProvider).getJobs();
+});
 
-  List<Map<String, dynamic>> getMatchedJobs(ResumeAnalysis? latestResume) {
-    // If no resume, return top trending jobs
+class JobService {
+  final FirebaseFirestore _db = FirebaseFirestore.instanceFor(
+    app: Firebase.app(),
+    databaseId: 'intellitrain',
+  );
+
+  Stream<List<Job>> getJobs() {
+    return _db
+        .collection('jobs')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Job.fromFirestore(doc)).toList());
+  }
+
+  // Matching logic (keeping it for existing compatibility if needed, 
+  // but updated to handle the new Job model if we want to use it for matching too)
+  List<Map<String, dynamic>> getMatchedJobs(ResumeAnalysis? latestResume, List<Job> allJobs) {
     if (latestResume == null) {
-      return _mockJobs.take(3).map((j) => {...j, 'isTrending': true, 'matchScore': 0.0}).toList();
+      return allJobs.take(3).map((j) => {
+        'title': j.title,
+        'company': j.company,
+        'skills': [], // New model doesn't explicitly have skills list in snippet, but we can extract from description
+        'isTrending': true,
+        'matchScore': 0.0,
+        'job': j,
+      }).toList();
     }
     
     final resumeSkills = latestResume.extractedSkills.map((k) => k.toLowerCase()).toList();
     final fallbackKeywords = latestResume.keywords.map((k) => k.toLowerCase()).toList();
-    
-    // Combine for maximum matching potential
     final allSearchTerms = [...resumeSkills, ...fallbackKeywords];
+    
     List<Map<String, dynamic>> results = [];
 
-    for (var job in _mockJobs) {
-      final jobSkills = (job['skills'] as List<dynamic>).map((s) => s.toString().toLowerCase()).toList();
+    for (var job in allJobs) {
+      // Basic matching in description and title
+      int matches = 0;
+      final textToSearch = "${job.title} ${job.description}".toLowerCase();
       
-      int matchedCount = 0;
-      for (var skill in jobSkills) {
-        if (allSearchTerms.any((term) => term.contains(skill) || skill.contains(term))) {
-          matchedCount++;
+      for (var term in allSearchTerms) {
+        if (textToSearch.contains(term)) {
+          matches++;
         }
       }
 
-      double matchScore = jobSkills.isNotEmpty ? (matchedCount / jobSkills.length) * 100 : 0;
+      double matchScore = allSearchTerms.isNotEmpty ? (matches / allSearchTerms.length) * 100 : 0;
       
-      if (matchScore >= 25) { // Threshold for a "match"
+      if (matchScore >= 10) { // Lowered threshold for text-based matching
         results.add({
-          ...job,
+          'title': job.title,
+          'company': job.company,
           'isTrending': false,
           'matchScore': matchScore,
+          'job': job,
         });
       }
     }
 
-    // Sort matches by score
     results.sort((a, b) => (b['matchScore'] as double).compareTo(a['matchScore'] as double));
 
-    // If no quality matches, provide trending recommendations
     if (results.isEmpty) {
-      return _mockJobs.take(3).map((j) => {
-        ...j, 
+      return allJobs.take(3).map((j) => {
+        'title': j.title,
+        'company': j.company,
         'isTrending': true, 
         'matchScore': 0.0,
-        'recommendationReason': 'Trending in your region'
+        'recommendationReason': 'Trending in your region',
+        'job': j,
       }).toList();
     }
 
     return results;
   }
 }
+

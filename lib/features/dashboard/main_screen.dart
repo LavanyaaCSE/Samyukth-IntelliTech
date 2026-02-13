@@ -5,6 +5,7 @@ import 'dashboard_screen.dart';
 import '../resume/resume_screen.dart';
 import '../interviews/interviews_screen.dart';
 import '../assessments/assessment_list_screen.dart';
+import '../jobs/job_search_screen.dart';
 import 'profile_screen.dart';
 import 'security_privacy_screen.dart';
 import '../../core/app_colors.dart';
@@ -172,8 +173,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       const DashboardScreen(),
       const AssessmentListScreen(),
       const ResumeScreen(),
+      const JobSearchScreen(),
       const InterviewsScreen(),
-      const ProfileScreen(),
     ];
   }
 
@@ -182,8 +183,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Home'),
       BottomNavigationBarItem(icon: Icon(Icons.quiz_outlined), activeIcon: Icon(Icons.quiz), label: 'Tests'),
       BottomNavigationBarItem(icon: Icon(Icons.description_outlined), activeIcon: Icon(Icons.description), label: 'Resume'),
+      BottomNavigationBarItem(icon: Icon(Icons.search_outlined), activeIcon: Icon(Icons.search), label: 'Jobs'),
       BottomNavigationBarItem(icon: Icon(Icons.interpreter_mode_outlined), activeIcon: Icon(Icons.interpreter_mode), label: 'Interviews'),
-      BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
     ];
   }
 
