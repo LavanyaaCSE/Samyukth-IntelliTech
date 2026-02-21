@@ -7,6 +7,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:read_pdf_text/read_pdf_text.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../core/app_colors.dart';
 import '../../services/gemini_service.dart';
 import '../../services/resume_service.dart';
@@ -62,42 +63,44 @@ class _ResumeScreenState extends ConsumerState<ResumeScreen> with SingleTickerPr
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
+        withData: kIsWeb, // Required for web to get bytes
       );
 
-      if (result != null && result.files.single.path != null) {
+      if (result != null) {
         setState(() {
           _isLoading = true;
           _fileName = result.files.single.name;
         });
 
-        final filePath = result.files.single.path!;
-        
-        // Extract text from PDF
-        String extractedText = "";
-        try {
-          extractedText = await ReadPdfText.getPDFtext(filePath);
-        } catch (e) {
-          throw 'Failed to read PDF text. Make sure it is not password protected.';
-        }
+        String? extractedText;
+        List<int>? fileBytes = result.files.single.bytes;
 
-        if (extractedText.isEmpty) {
-           throw 'Could not extract text from this PDF.';
+        // On non-web, we try to extract text locally first
+        if (!kIsWeb && result.files.single.path != null) {
+          try {
+            extractedText = await ReadPdfText.getPDFtext(result.files.single.path!);
+          } catch (e) {
+            print('Local PDF extraction failed, will try direct upload if bytes available: $e');
+          }
         }
 
         // Call Gemini Service based on Tab Index
         String jsonString;
         final isJobMatch = _tabController.index == 1;
+        
         if (isJobMatch) {
-           // Job Match Mode
-           jsonString = await ref.read(geminiServiceProvider).analyzeResumeWithJobDescription(
+          jsonString = await ref.read(geminiServiceProvider).analyzeResumeWithJobDescription(
             resumeText: extractedText,
             jobDescription: _jdController.text.trim(),
+            fileBytes: fileBytes,
+            mimeType: 'application/pdf',
           );
           _isJdAnalysis = true;
         } else {
-           // General Mode
-           jsonString = await ref.read(geminiServiceProvider).analyzeResume(
+          jsonString = await ref.read(geminiServiceProvider).analyzeResume(
             text: extractedText,
+            fileBytes: fileBytes,
+            mimeType: 'application/pdf',
           );
           _isJdAnalysis = false;
         }

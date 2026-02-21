@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:firebase_vertexai/firebase_vertexai.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,7 +9,7 @@ final geminiServiceProvider = Provider<GeminiService>((ref) {
 class GeminiService {
   GeminiService();
 
-  Future<String> _generateContent(String prompt, {String modelName = 'gemini-2.5-flash'}) async {
+  Future<String> _generateContent(String prompt, {String modelName = 'gemini-2.0-flash', List<int>? fileBytes, String? mimeType}) async {
     try {
       final model = FirebaseVertexAI.instance.generativeModel(
         model: modelName, 
@@ -17,7 +18,19 @@ class GeminiService {
         ),
       );
 
-      final content = [Content.text(prompt)];
+      final List<Content> content = [];
+      
+      if (fileBytes != null && mimeType != null) {
+        // Multi-modal content (PDF + Text Prompt)
+        content.add(Content.multi([
+          InlineDataPart(mimeType, Uint8List.fromList(fileBytes)),
+          TextPart(prompt),
+        ]));
+      } else {
+        // Text-only content
+        content.add(Content.text(prompt));
+      }
+
       final response = await model.generateContent(content);
 
       if (response.text != null) {
@@ -42,13 +55,12 @@ class GeminiService {
       "short_summary": "One sentence summary"
     }
     
-    Resume Text:
-    $text
+    ${text != null ? 'Resume Text:\n$text' : 'Please analyze the attached file.'}
     """;
-    return _generateContent(prompt);
+    return _generateContent(prompt, fileBytes: fileBytes, mimeType: mimeType);
   }
 
-  Future<String> analyzeResumeWithJobDescription({required String resumeText, required String jobDescription}) async {
+  Future<String> analyzeResumeWithJobDescription({String? resumeText, required String jobDescription, List<int>? fileBytes, String? mimeType}) async {
     final prompt = """
     Analyze the following resume against the provided Job Description (JD). 
     Provide a JSON response with the following structure:
@@ -63,10 +75,9 @@ class GeminiService {
     Job Description:
     $jobDescription
 
-    Resume Text:
-    $resumeText
+    ${resumeText != null ? 'Resume Text:\n$resumeText' : 'Please analyze the attached file against the JD.'}
     """;
-    return _generateContent(prompt);
+    return _generateContent(prompt, fileBytes: fileBytes, mimeType: mimeType);
   }
 
   Future<String> generateInterviewQuestion(String mode, String topic, {String? jobDescription}) async {

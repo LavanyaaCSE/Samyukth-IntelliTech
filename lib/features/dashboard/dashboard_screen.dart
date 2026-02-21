@@ -128,41 +128,46 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  authState.when(
-                    data: (user) => _buildWelcomeSection(
-                      user?.displayName ?? user?.email?.split('@')[0] ?? 'User'
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 1000), // Max width for web
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    authState.when(
+                      data: (user) => _buildWelcomeSection(
+                        user?.displayName ?? user?.email?.split('@')[0] ?? 'User'
+                      ),
+                      loading: () => _buildWelcomeSection('User'),
+                      error: (_, __) => _buildWelcomeSection('User'),
                     ),
-                    loading: () => _buildWelcomeSection('User'),
-                    error: (_, __) => _buildWelcomeSection('User'),
-                  ),
-                  const SizedBox(height: 32),
-                  authState.when(
-                    data: (user) => _buildReadinessScore(ref, user?.uid),
-                    loading: () => _buildReadinessScore(ref, null),
-                    error: (_, __) => _buildReadinessScore(ref, null),
-                  ),
-                  const SizedBox(height: 32),
-                  const WeeklyPlanWidget(),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Your Learning Path',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  authState.when(
-                    data: (user) => _buildFeatureGrid(context, ref, user?.uid),
-                    loading: () => _buildFeatureGrid(context, ref, null),
-                    error: (_, __) => _buildFeatureGrid(context, ref, null),
-                  ),
-                  const SizedBox(height: 32),
-                  _buildUpcomingAssessments(context, ref),
-                  const SizedBox(height: 100),
-                ],
+                    const SizedBox(height: 32),
+                    authState.when(
+                      data: (user) => _buildReadinessScore(ref, user?.uid),
+                      loading: () => _buildReadinessScore(ref, null),
+                      error: (_, __) => _buildReadinessScore(ref, null),
+                    ),
+                    const SizedBox(height: 32),
+                    const WeeklyPlanWidget(),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Your Learning Path',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    authState.when(
+                      data: (user) => _buildFeatureGrid(context, ref, user?.uid),
+                      loading: () => _buildFeatureGrid(context, ref, null),
+                      error: (_, __) => _buildFeatureGrid(context, ref, null),
+                    ),
+                    const SizedBox(height: 32),
+                    _buildUpcomingAssessments(context, ref),
+                    const SizedBox(height: 100),
+                  ],
+                ),
               ),
             ),
           ),
@@ -347,13 +352,17 @@ class DashboardScreen extends ConsumerWidget {
     }
 
 
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final int crossAxisCount = screenWidth > 900 ? 4 : (screenWidth > 600 ? 3 : 2);
+    final double spacing = screenWidth > 600 ? 24.0 : 16.0;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 0.85,
+      crossAxisCount: crossAxisCount,
+      mainAxisSpacing: spacing,
+      crossAxisSpacing: spacing,
+      childAspectRatio: screenWidth > 600 ? 1.0 : 0.85,
       children: [
         _buildFeatureCard(
           context,

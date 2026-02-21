@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:read_pdf_text/read_pdf_text.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../core/app_colors.dart';
 import '../../services/gemini_service.dart';
 import '../../services/resume_service.dart';
@@ -35,21 +36,30 @@ class _JobMatchesScreenState extends ConsumerState<JobMatchesScreen> {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
+        withData: kIsWeb,
       );
 
-      if (result != null && result.files.single.path != null) {
+      if (result != null) {
         setState(() => _isAnalyzing = true);
 
-        final filePath = result.files.single.path!;
         final fileName = result.files.single.name;
+        String? extractedText;
+        List<int>? fileBytes = result.files.single.bytes;
         
-        // 1. Extract text
-        String extractedText = await ReadPdfText.getPDFtext(filePath);
-        if (extractedText.isEmpty) throw 'Could not extract text from PDF.';
+        // 1. Extract text (Non-web only)
+        if (!kIsWeb && result.files.single.path != null) {
+          try {
+            extractedText = await ReadPdfText.getPDFtext(result.files.single.path!);
+          } catch (e) {
+            print('Local text extraction failed: $e');
+          }
+        }
 
-        // 2. AI Analysis
+        // 2. AI Analysis (Supporting direct PDF upload)
         String jsonString = await ref.read(geminiServiceProvider).analyzeResume(
           text: extractedText,
+          fileBytes: fileBytes,
+          mimeType: 'application/pdf',
         );
 
         final decoded = jsonDecode(jsonString);

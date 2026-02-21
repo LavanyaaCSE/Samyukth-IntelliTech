@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService(FirebaseAuth.instance);
@@ -79,7 +80,9 @@ class AuthService {
     try {
       print('🚪 Signing out...');
       // Sign out from Google Sign-In if user was signed in with Google
-      final googleSignIn = GoogleSignIn();
+      final googleSignIn = GoogleSignIn(
+        clientId: kIsWeb ? '450979258698-30opfq3nldjdf6p6unsdnkeoqks0ambs.apps.googleusercontent.com' : null,
+      );
       if (await googleSignIn.isSignedIn()) {
         await googleSignIn.signOut();
         print('✅ Signed out from Google');
@@ -96,7 +99,10 @@ class AuthService {
   Future<UserCredential> signInWithGoogle() async {
     try {
       print('🔍 Attempting Google Sign-In');
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final googleSignIn = GoogleSignIn(
+        clientId: kIsWeb ? '450979258698-30opfq3nldjdf6p6unsdnkeoqks0ambs.apps.googleusercontent.com' : null,
+      );
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         print('⚠️ Google Sign-In was cancelled by user');
         throw 'Google Sign-In aborted.';
